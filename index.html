@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultor de Serviços de Nuvem</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 800px;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        .card-header {
+            cursor: pointer;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-content {
+            padding: 0 16px 16px;
+            display: none;
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        .card-content.show {
+            display: block;
+        }
+        .expand-icon {
+            transition: transform 0.3s ease-in-out;
+        }
+        .expand-icon.rotate {
+            transform: rotate(180deg);
+        }
+        .badge {
+            display: inline-block;
+            background-color: #e5e7eb;
+            color: #4b5563;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+    </style>
+</head> 
+<body class="p-4">
+    <div class="container mx-auto">
+        <h1 class="text-3xl font-bold text-center my-8">Comparativo de Serviços de Nuvem</h1>
+        <div class="relative mb-6">
+            <input type="text" id="search-input" placeholder="Pesquisar serviços..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </div>
+        <div id="services-container" class="text-center text-gray-500">
+            Carregando dados...
+        </div>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('search-input');
+        const servicesContainer = document.getElementById('services-container');
+        let allServices = [];
+
+        async function loadData() {
+            try {
+                const response = await fetch('cloudcomp.csv');
+                if (!response.ok) {
+                    throw new Error(`Erro ao carregar o arquivo CSV: ${response.statusText}`);
+                }
+                const csvData = await response.text();
+                allServices = parseCsv(csvData);
+                renderServices(allServices);
+            } catch (error) {
+                console.error('Falha ao carregar os dados:', error);
+                servicesContainer.innerHTML = `<div class="p-4 text-red-500">Erro ao carregar os dados. Por favor, verifique se o arquivo 'cloudcomp.csv' está na mesma pasta.</div>`;
+            }
+        }
+
+        function parseCsv(data) {
+            const lines = data.trim().split('\n');
+            return lines.map(line => {
+                const values = line.split('","').map(v => v.replace(/"/g, ''));
+                return {
+                    category: values[0],
+                    awsService: values[1],
+                    gcpService: values[2],
+                    azureService: values[3],
+                    ociService: values[4],
+                    equivalence: values[5],
+                    details: values[6],
+                };
+            });
+        }
+
+        function renderServices(services) {
+            servicesContainer.innerHTML = '';
+            if (services.length === 0) {
+                servicesContainer.innerHTML = `<div class="p-4 text-gray-500">Nenhum serviço encontrado.</div>`;
+            }
+
+            services.forEach(service => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header flex justify-between items-center" data-id="${service.awsService}">
+                        <div>
+                            <h3 class="text-lg font-semibold">${service.awsService}</h3>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <span class="badge">${service.category}</span>
+                                <span class="ml-2">Equivalência: ${service.equivalence}</span>
+                            </div>
+                        </div>
+                        <svg class="expand-icon w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <div class="p-4 bg-gray-50 rounded-lg">
+                            <p class="text-sm font-medium text-gray-500">Serviços Equivalentes:</p>
+                            <div class="mt-2 text-sm space-y-2">
+                                <p><span class="font-semibold">GCP:</span> ${service.gcpService}</p>
+                                <p><span class="font-semibold">Azure:</span> ${service.azureService}</p>
+                                <p><span class="font-semibold">OCI:</span> ${service.ociService}</p>
+                            </div>
+                            <p class="mt-4 text-sm font-medium text-gray-500">Detalhes:</p>
+                            <p class="mt-2 text-sm text-gray-700">${service.details}</p>
+                        </div>
+                    </div>
+                `;
+                servicesContainer.appendChild(card);
+            });
+
+            document.querySelectorAll('.card-header').forEach(header => {
+                header.addEventListener('click', (event) => {
+                    const content = event.currentTarget.nextElementSibling;
+                    const icon = event.currentTarget.querySelector('.expand-icon');
+                    
+                    if (content.classList.contains('show')) {
+                        content.classList.remove('show');
+                        icon.classList.remove('rotate');
+                    } else {
+                        content.classList.add('show');
+                        icon.classList.add('rotate');
+                    }
+                });
+            });
+        }
+
+        function filterServices() {
+            const query = searchInput.value.toLowerCase();
+            const filteredServices = allServices.filter(service => {
+                const searchString = `${service.awsService} ${service.category} ${service.gcpService} ${service.azureService} ${service.ociService} ${service.equivalence}`.toLowerCase();
+                return searchString.includes(query);
+            });
+            renderServices(filteredServices);
+        }
+
+        searchInput.addEventListener('input', filterServices);
+
+        // Inicia o carregamento dos dados quando a página é carregada
+        loadData();
+    </script>
+</body>
+</html>
