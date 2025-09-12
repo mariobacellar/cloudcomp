@@ -55,16 +55,31 @@
     </style>
 </head> 
 <body class="p-4">
+
     <div class="container mx-auto">
-        
-		<h1 class="text-3xl font-bold my-8 text-center flex items-center justify-center space-x-4">
+	
+		<h1 class="text-3xl font-bold">
 			<span>Comparativo de Serviços na Nuvem</span>
-			<img src="aws.svg.png" alt="AWS" class="h-8 w-8 md:h-10 md:w-10">
-			<img src="gcp.svg.png" alt="GCP" class="h-8 w-8 md:h-10 md:w-10">
-			<img src="azure.svg.png" alt="Azure" class="h-8 w-8 md:h-10 md:w-10">
-			<img src="oci.svg.png" alt="OCI" class="h-8 w-8 md:h-10 md:w-10">
 		</h1>
+			<br>
+			<table border=10>
+				<tr>
+					<td>
+						<img src="aws.svg.png" alt="AWS" class="h-8 w-8 md:h-10 md:w-10">	 
+					</td>
+					<td>
+						<img src="gcp.svg.png" alt="GCP" class="h-8 w-8 md:h-10 md:w-10">	 
+					</td>
+					<td>
+						<img src="azure.svg.png" alt="Azure" class="h-8 w-8 md:h-10 md:w-10"> 
+					</td>				
+					<td>
+						<img src="oci.svg.png" alt="OCI" class="h-8 w-8 md:h-10 md:w-10">
+					</td>
+				</tr>
+			</table>
 		
+			<br>
 		<p>Mario da Costa Bacellar - Arquitetura de TI - Integração de Sistemas - 
 		<font color=blue>
 			<a href="https://www.linkedin.com/in/mariobacellar/" 	target="_blank">LinkedIn</a> - 
@@ -76,11 +91,13 @@
         
 		<div class="relative mb-6">
             <input type="text" id="search-input" placeholder="Pesquisar serviços..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+				<circle cx="11" cy="11" r="8"></circle>
+				<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+			</svg>
         </div>
-        <div id="services-container" class="text-gray-500">
-            Carregando dados...
-        </div>
+        <div id="services-container" class="text-gray-500"> Carregando dados... </div>
+		
     </div>
 
     <script>
@@ -189,4 +206,3 @@
     </script>
 </body>
 </html>
-
