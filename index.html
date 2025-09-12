@@ -51,7 +51,17 @@
             border-radius: 9999px;
             font-size: 0.75rem;
             font-weight: 600;
-        }
+        }		
+		.meu-link {
+		  text-decoration: none;
+		  color: blue; /* Cor do link normal */
+		  transition: text-decoration 0.3s ease-in-out; /* Transição suave */
+		}
+		.meu-link:hover {
+		  text-decoration: underline;
+		  color: darkblue; /* Nova cor do link ao passar o mouse */
+		}		
+		
     </style>
 </head> 
 <body class="p-4">
@@ -80,14 +90,15 @@
 			</table>
 		
 			<br>
-<p>Mario da Costa Bacellar 
+		<p>Mario da Costa Bacellar 
 		<p> Arquitetura de TI - Integração de Sistemas 
 		<p> 
 		<font color=blue>
 			<a href="https://www.linkedin.com/in/mariobacellar/" 	target="_blank">LinkedIn</a> - 
 			<a href="https://mariobacellar.github.io/" 						target="_blank">GitHub</a>
 		<f/ont>
-		</p>		
+		</p>
+		
 		<br>
         
 		<div class="relative mb-6">
@@ -102,30 +113,54 @@
     </div>
 
     <script>
+	
         const searchInput = document.getElementById('search-input');
         const servicesContainer = document.getElementById('services-container');
         let allServices = [];
 
         async function loadData() {
             try {
-                const response = await fetch('cloudcomp.csv');
-                if (!response.ok) {
-                    throw new Error(`Erro ao carregar o arquivo CSV: ${response.statusText}`);
+                
+				const response = await fetch('cloudcomp.csv');
+                
+				if (!response.ok) {
+                    throw new Error(`Erro carregando arquivo CSV: ${response.statusText}`);
                 }
+				
                 const csvData = await response.text();
-                allServices = parseCsv(csvData);
+                
+				allServices = parseCsv(csvData);
                 renderServices(allServices);
+				
             } catch (error) {
                 console.error('Falha ao carregar os dados:', error);
-                servicesContainer.innerHTML = `<div class="p-4 text-red-500">Erro ao carregar os dados. Por favor, verifique se o arquivo 'cloudcomp.csv' está na mesma pasta.</div>`;
+                servicesContainer.innerHTML = `<div class="p-4 text-red-500">Erro carregando dados. Verifique se o arquivo 'cloudcomp.csv' está na mesma pasta.</div>`;
             }
         }
 
         function parseCsv(data) {
+		
             const lines = data.trim().split('\n');
+			
             return lines.map(line => {
-                const values = line.split('","').map(v => v.replace(/"/g, ''));
-                return {
+				
+				const values = line.split('","').map(v => v.replace(/"/g, '')); // "Categoria","AWS","AWS Link","GCP","GCP Link","Azure","Azure Link","OCI","OCI Link","Equivalência","Detalhe da Equivalência","Descricao AWS"
+				
+				return {			
+					category: values[0],
+					awsService: values[1],
+					awsLink: values[2],
+					gcpService: values[3],
+					gcpLink: values[4],
+					azureService: values[5],
+					azureLink: values[6],
+					ociService: values[7],
+					ociLink: values[8],
+					equivalence: values[9],
+					details: values[10],
+					awsDesc: values[11]
+
+/*
                     category: values[0],
                     awsService: values[1],
                     gcpService: values[2],
@@ -133,42 +168,55 @@
                     ociService: values[4],
                     equivalence: values[5],
                     details: values[6],
+*/
                 };
             });
         }
 
         function renderServices(services) {
+		
             servicesContainer.innerHTML = '';
             if (services.length === 0) {
                 servicesContainer.innerHTML = `<div class="p-4 text-gray-500">Nenhum serviço encontrado.</div>`;
             }
 
             services.forEach(service => {
+			
                 const card = document.createElement('div');
+				
                 card.className = 'card';
+				
                 card.innerHTML = `
-                    <div class="card-header flex justify-between items-center" data-id="${service.awsService}">
+                    
+					<div class="card-header flex justify-between items-center" data-id="${service.awsService}">
                         <div>
                             <h3 class="text-lg font-semibold">${service.awsService}</h3>
                             <div class="text-sm text-gray-600 mt-1">
-                                <span class="badge">${service.category}</span>
-                                <span class="ml-2">Equivalência: ${service.equivalence}</span>
+                                <span class="badge">${service.category}</span> ${service.details}
+								<br><br>
+                                <span class="ml-2 text-amber-950 bg-amber-200 badge">${service.awsDesc}</span>
                             </div>
                         </div>
                         <svg class="expand-icon w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </div>
+					
                     <div class="card-content">
                         <div class="p-4 bg-gray-50 rounded-lg">
-                            <p class="text-sm font-medium text-gray-500">Serviços Equivalentes:</p>
+                            <p class="text-sm font-medium-bold text-blue-900 badge">Serviços Equivalentes </p>
                             <div class="mt-2 text-sm space-y-2">
-                                <p><span class="font-semibold">GCP:</span> ${service.gcpService}</p>
-                                <p><span class="font-semibold">Azure:</span> ${service.azureService}</p>
-                                <p><span class="font-semibold">OCI:</span> ${service.ociService}</p>
+                                <p><span class="font-semibold">GCP:</span>	${service.gcpService}     <a class="meu-link" href=${service.gcpLink} target="_blank">(${service.gcpLink})	 </a> </p>
+                                <p><span class="font-semibold">Azure:</span>	${service.azureService}  <a class="meu-link" href=${service.gcpLink} target="_blank">(${service.azureLink})	 </a> </p>
+                                <p><span class="font-semibold">OCI:</span>	${service.ociService}       <a class="meu-link" href=${service.gcpLink} target="_blank">(${service.ociLink})	 </a> </p>
                             </div>
-                            <p class="mt-4 text-sm font-medium text-gray-500">Detalhes:</p>
-                            <p class="mt-2 text-sm text-gray-700">${service.details}</p>
+							
+							<br>
+							<p class="text-sm font-medium-bold text-blue-900 badge">Equivalência: ${service.equivalence} </p>
+<br><br>
+                            <p class="text-xs text-red-400 mt-1">1:1 — correspondência direta e forte entre provedores (mesma função e escopo).</p>
+                            <p class="text-xs text-red-400 mt-1">Aproximado — serviço cobre a necessidade funcionalmente, mas existem diferenças significativas (modelos, limites, SLA, integração).</p>
+                            <p class="text-xs text-red-400 mt-1">Parceiro — a equivalência está disponível via marketplace / parceiro (não nativo ou é ofertado por terceiros).</p>
                         </div>
                     </div>
                 `;
@@ -207,5 +255,3 @@
     </script>
 </body>
 </html>
-
-
