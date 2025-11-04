@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultor de Serviços de Nuvem</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 900px;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        .card-header {
+            cursor: pointer;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .card-content {
+            padding: 0 16px 16px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out;
+        }
+        .card-content.show {
+            max-height: 2000px; /* Suficientemente grande para qualquer conteúdo */
+        }
+        .expand-icon {
+            transition: transform 0.3s ease;
+        }
+        .rotate {
+            transform: rotate(180deg);
+        }
+        .cloud-service {
+            border-color: #3b82f6; /* Default Blue */
+        }
+        /* Cores customizadas para serviços */
+        .gcp-border { border-color: #4285F4; }
+        .azure-border { border-color: #0078D4; }
+        .oci-border { border-color: #F80000; }
+        .gemini-source-link {
+            color: #4f46e5;
+            text-decoration: underline;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+
+<body class="p-4 sm:p-8">
+
+    <div class="container mx-auto">
+
+        <div id="header" class="fixed inset-x-0 top-0 z-40 bg-white/80 backdrop-blur-sm shadow">
+            <p>.</p>
+            <div class="flex items-center justify-center mb-6 gap-4">
+                <h1 class="text-3xl font-bold text-stone-900 m-0 px-3 py-1 rounded-md">Compare os Serviços das Nuvens</h1>
+                <!-- ícones alinhados à direita do título -->
+                <div class="flex items-center gap-3">
+                <img src="./img/aws.svg.png"  alt="AWS"  class="h-8 w-8 md:h-10 md:w-10">
+                <img src="./img/gcp.svg.png"  alt="GCP"  class="h-8 w-8 md:h-10 md:w-10">
+                <img src="./img/azure.svg.png"alt="Azure"class="h-8 w-8 md:h-10 md:w-10">
+                <img src="./img/oci.svg.png"  alt="OCI"  class="h-8 w-8 md:h-10 md:w-10">
+                </div>
+            </div>
+
+            <div class="text-center mb-6">
+                <p class="text-sm text-gray-700">Mario da Costa Bacellar - 
+                    <span class="text-blue-600">
+                        <a href="https://www.linkedin.com/in/mariobacellar/" target="_blank" class="underline hover:text-blue-800">LinkedIn</a> - 
+                        <a href="https://mariobacellar.github.io/" target="_blank" class="underline hover:text-blue-800">GitHub</a>
+                    </span>
+                </p>
+            </div>
+
+            <div class="db-card p-4 mb-8 bg-white rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Filtrar Serviços</h2>
+                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                    <!-- Filtro por Categoria -->
+                    <div>
+                        <label for="fileSelect" class="block text-sm font-medium text-gray-700">Filtro de Categoria (Serviço AWS)</label>
+                        <select id="fileSelect" class="w-full p-2 border-2 border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                            <option value="./csv/cloudcomp_Database.csv">Todos os Serviços AWS</option>
+                            <option value="./csv/cloudcomp_Database.csv"    >Compute</option>
+                            <option value="./csv/cloudcomp_Database.csv"   >Database</option>
+                            <option value="./csv/cloudcomp_Database.csv" >Networking</option>
+                            <option value="./csv/cloudcomp_Database.csv"    >Storage</option>
+                        </select>
+                    </div>
+                    <!-- Pesquisa por Palavra-chave -->
+                    <div class="flex-grow">
+                        <label for="searchInput" class="block text-sm font-medium text-gray-700">Pesquisar por Nome/Descrição</label>
+                        <input type="text" id="searchInput" placeholder="Ex: MySQL, Kubernetes..." class="w-full p-2 border-2 border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div id="loadingIndicator" class="text-center p-8 text-gray-500 text-lg hidden"> Carregando dados... </div>
+
+        <div id="details-services">
+            <div id="servicesContainer">
+                <!-- Cards de Serviço serão renderizados aqui -->
+            </div>
+        </div>
+
+        <p id="noResults" class="text-center text-gray-500 p-8 hidden">Nenhum resultado encontrado para o filtro atual.</p>
+        
+    </div>
+
+    <script>
+        // Variável de controle e dados
+        let allServices = [];
+        
+        // A chave API DEVE ser vazia, mas a removemos da URL para contornar a falha de injeção.
+        const apiKey = "AIzaSyCpCYqbUQuc7Rv3PInz3M5Ck00ph6iGC04"; 
+        
+		//const modelName = "gemini-2.5-flash-preview-05-20";
+		const modelName = "gemini-pro-latest";
+        
+		// CORREÇÃO CRUCIAL: 
+		// Removemos o "?key=${apiKey}" da URL.
+        // O ambiente Canvas tentará autenticar a requisição através do cabeçalho.
+        //const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/?key=${apiKey}:${modelName}:generateContent`; 
+		const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent?key=${apiKey}`;
+		
+        // Mapeamento dos campos do CSV
+        const FIELD_MAP = [
+            'category', 
+            'awsService'    ,   'awsLink'   , 
+            'gcpService'    ,   'gcpLink'   , 
+            'azureService'  ,   'azureLink' , 
+            'ociService'    ,   'ociLink'   , 
+            'awsDesc'       ,   'gcpDesc'   , 'azureDesc', 'ociDesc', 
+            'equivGcp'      ,   'equivAzure', 'equivOci'
+        ];
+
+        // Elementos da UI
+        const servicesContainer = document.getElementById('servicesContainer');
+        const searchInput       = document.getElementById('searchInput');
+        const fileSelect        = document.getElementById('fileSelect');
+        const loadingIndicator  = document.getElementById('loadingIndicator');
+
+        // Função utilitária para tratar o CSV
+        function parseCSV(text) {
+            // console.log('Iniciando parse do CSV');
+            const lines = text.trim().split(/\r?\n/).filter(line => line.trim() !== '');
+            //  console.log('Total de linhas no CSV:', lines.length);
+            const data = [];
+
+            lines.forEach((line, lineIndex) => {
+                // Regex melhorada para extrair campos com aspas duplas, tratando aspas duplas internas ("")
+                const values = line.match(/"((?:[^"]|"")*)"/g) || [];
+                
+                if (values.length !== FIELD_MAP.length) {
+                    console.warn(`Linha ${lineIndex + 1} tem ${values.length} campos, esperados ${FIELD_MAP.length}`);
+                    console.log('Conteúdo da linha:', line);
+                    return;
+                }
+                
+                const item = {};
+                values.forEach((val, index) => {
+                    let cleanedVal = val.replace(/^"|"$/g, '').replace(/""/g, '"');
+                    item[FIELD_MAP[index]] = cleanedVal;
+                });
+                
+                // Adiciona um ID de sessão para rastreamento no frontend
+                item.id = data.length + 1; 
+                data.push(item);
+            });
+            
+            console.log('Total de registros parseados com sucesso:', data.length);
+            if (data.length > 0) {
+                console.log('Exemplo do primeiro registro:', data[0]);
+            }
+            
+            return data;
+        }
+
+        // --- GEMINI API INTEGRATION ---
+
+        /**
+         * Chama a Gemini API para validar as informações do serviço (sem pesquisa na web).
+         */
+        async function validateService(cloudName, awsService, cloudService, awsDesc, cloudDesc, equivNotes) {
+            
+            // Cria um ID único usando os nomes dos serviços para localizar o elemento de resultado
+            const resultIdBase = awsService.replace(/\s/g, '_');
+            const resultEl = document.getElementById(`geminiResult_${resultIdBase}_${cloudName}`);
+            const buttonEl = document.getElementById(`validateBtn_${resultIdBase}_${cloudName}`);
+            
+            if (!resultEl || !buttonEl) {
+                console.error("Elemento de resultado ou botão não encontrado. Verifique o ID:", `geminiResult_${resultIdBase}_${cloudName}`);
+                return;
+            }
+
+            // Desabilita o botão e mostra loading
+            buttonEl.disabled = true;
+            buttonEl.textContent = 'Analisando...';
+            buttonEl.classList.add('opacity-60', 'cursor-not-allowed');
+            resultEl.innerHTML = '<div class="flex items-center text-indigo-600"><div class="animate-pulse h-4 w-4 bg-indigo-600 rounded-full mr-2"></div> Analisando dados internos com o Gemini...</div>'; 
+
+            // 1. Constrói o System Prompt e User Query
+            const systemPrompt = "Você é um Analista Sênior de Arquitetura Cloud (AWS, GCP, Azure, OCI). Sua tarefa é **comparar e analisar estritamente** a equivalência e as descrições fornecidas entre o serviço AWS e o serviço equivalente de outra Cloud. Seu foco deve ser em apontar quaisquer diferenças ou complementar a nota de equivalência com base nas descrições técnicas que lhe foram dadas. Não use informações externas. Seu tom deve ser técnico e objetivo.";
+            
+            const userQuery = `
+                Analise a equivalência entre o serviço AWS e o serviço ${cloudName} usando apenas os dados abaixo.
+
+                1. Serviço AWS: ${awsService}
+                2. Descrição do Serviço AWS (Base de Comparação): "${awsDesc}"
+                3. Serviço ${cloudName}: ${cloudService}
+                4. Descrição Atual na Base de Dados do Serviço ${cloudName}: "${cloudDesc}"
+                5. Notas de Equivalência Atuais na Base de Dados: "${equivNotes}"
+                
+                Com base *somente* nas descrições fornecidas, por favor, faça uma análise concisa e clara (em Português):
+                - Pontos de convergência e divergência nas descrições.
+                - Se a "Nota de Equivalência" atual é suficiente ou pode ser complementada com base na análise das duas descrições.
+                
+                Forneça uma resposta concisa, clara e estruturada.
+            `;
+            
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                }
+            };
+
+            // 2. Tenta fazer a chamada API com Backoff
+            let maxRetries = 3;
+            let delay = 500; 
+            let responseData = null;
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(apiUrl, { // Usando a URL sem o parâmetro "key"
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        // Trata explicitamente o erro 403 e outros erros HTTP
+                        if (response.status === 403) {
+                            throw new Error(`[403 FORBIDDEN] Acesso negado. A chave API pode não estar sendo injetada corretamente pelo ambiente.`);
+                        }
+                        if (response.status === 429 && i < maxRetries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; 
+                            continue; // Pula para a próxima tentativa
+                        }
+                        throw new Error(`Erro API: Status ${response.status} - ${response.statusText}`);
+                    }
+
+                    responseData = await response.json();
+                    break; // Sucesso
+
+                } catch (error) {
+                    console.error("Erro na tentativa de API:", error.message);
+                    if (i === maxRetries - 1) {
+                         // Lança o erro para ser capturado no bloco final
+                        throw error; 
+                    }
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+
+            // 3. Processa e exibe a resposta
+            try {
+                if (!responseData) {
+                    throw new Error("Resposta da API vazia ou falha após várias tentativas.");
+                }
+
+            const generatedText = responseData.candidates?.[0]?.content?.parts?.[0]?.text || "Nenhuma resposta gerada.";
+
+            // Limita a altura da resposta gerada e permite scroll interno para não estourar a tela
+            let htmlContent = 
+            `<div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-gray-800">
+                 <h5 class="font-bold text-sm text-indigo-700 mb-2">Análise Gemini (Base de Dados):</h5>
+                 <div class="text-sm prose max-w-none max-h-64 overflow-auto p-2">${generatedText.replace(/\n/g, '<br>')}</div>
+             </div>`;
+
+                resultEl.innerHTML = htmlContent;
+
+                // Quando receber resultado, permite fechar a análise com o mesmo botão e muda o estilo
+                try {
+                    buttonEl.textContent = 'Fechar Validação do Gemini';
+                    // Aplica estilo sólido laranja para o estado "Fechar"
+                    buttonEl.classList.remove('bg-indigo-500','hover:bg-indigo-600','text-white');
+                    buttonEl.classList.add('bg-orange-400','hover:bg-orange-500','text-black','transition-colors','duration-200');
+                } catch (e) {
+                    // se por algum motivo o botão não existir mais, ignorar
+                }
+
+            } catch (error) {
+                // Captura o erro da API, incluindo o 403 explícito
+                resultEl.innerHTML = 
+				`<div class="p-3 bg-red-100 border border-red-300 rounded-lg text-red-700 text-sm">
+					⚠️ Erro ao processar a resposta: ${error.message}
+                  </div>`;
+                // Em caso de erro, restaura o texto original do botão e estilo
+                try {
+                    buttonEl.textContent = 'Validar no Gemini';
+                    // restaura estilo original (indigo)
+                    buttonEl.classList.remove('bg-transparent','border-2','border-orange-400','text-orange-700','hover:bg-orange-50','transition-colors','duration-200');
+                    buttonEl.classList.add('bg-indigo-500','hover:bg-indigo-600','text-white','transition-colors','duration-200');
+                } catch (e) {}
+            } finally {
+                // Reabilita o botão
+                buttonEl.disabled = false;
+                buttonEl.classList.remove('opacity-60', 'cursor-not-allowed');
+            }
+        }
+
+        // --- UI Rendering ---
+        function renderServices(services) {
+            servicesContainer.innerHTML = '';
+            
+            if (services.length === 0) {
+                document.getElementById('noResults').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('noResults').classList.add('hidden');
+
+            services.forEach(item => {
+                // Prepara as strings para uso seguro em atributos data- (trocando " por &quot;)
+                const cleanAwsDesc      = item.awsDesc      ? item.awsDesc      .replace(/"/g, '&quot;') : '';
+                const cleanGcpDesc      = item.gcpDesc      ? item.gcpDesc      .replace(/"/g, '&quot;') : '';
+                const cleanAzureDesc    = item.azureDesc    ? item.azureDesc    .replace(/"/g, '&quot;') : '';
+                const cleanOciDesc      = item.ociDesc      ? item.ociDesc      .replace(/"/g, '&quot;') : '';
+                const cleanEquivGcp     = item.equivGcp     ? item.equivGcp     .replace(/"/g, '&quot;') : '';
+                const cleanEquivAzure   = item.equivAzure   ? item.equivAzure   .replace(/"/g, '&quot;') : '';
+                const cleanEquivOci     = item.equivOci     ? item.equivOci     .replace(/"/g, '&quot;') : '';
+                
+                // Cria um ID único para o resultado usando o nome do serviço AWS (para consistência)
+                const resultIdBase = item.awsService.replace(/\s/g, '_');
+
+                // Conteúdo para GCP
+                const gcpContent = item.gcpService ? `
+                    <div class="cloud-service p-4 border-l-4 gcp-border bg-blue-50 rounded-r-lg">
+                        <h4 class="font-bold text-lg text-blue-800 flex items-center justify-between">
+                            GCP: ${item.gcpService} 
+                            ${item.gcpLink ? `<a href="${item.gcpLink}" target="_blank" class="text-sm font-normal text-blue-500 link-input ml-2">(Link)</a>` : ''}
+                            <button class="ml-auto px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full hover:bg-indigo-600 transition duration-150 validate-btn" 
+                                data-aws-service="${item.awsService}"
+                                data-cloud-service="${item.gcpService}"
+                                data-cloud-name="GCP" 
+                                data-aws-desc="${cleanAwsDesc}" 
+                                data-cloud-desc="${cleanGcpDesc}" 
+                                data-equiv-notes="${cleanEquivGcp}"
+                                id="validateBtn_${resultIdBase}_GCP">Validar no Gemini</button>
+                        </h4>
+                        <p class="text-sm text-gray-700 mt-2">${item.gcpDesc || 'Sem descrição.'}</p>
+                        <p class="mt-3 text-sm font-semibold text-gray-800">Equivalência com AWS:</p>
+                        <p class="text-sm text-gray-600">${item.equivGcp || 'Sem notas de equivalência.'}</p>
+                        <div id="geminiResult_${resultIdBase}_GCP" class="mt-3 p-2 text-xs rounded-lg min-h-[30px] bg-white border border-gray-200">
+                            <span class="text-gray-400">Clique em "Validar no Gemini" para iniciar a análise.</span>
+                        </div>
+                    </div>
+                ` : '';
+
+                // Conteúdo para Azure
+                const azureContent = item.azureService ? `
+                    <div class="cloud-service p-4 border-l-4 azure-border bg-cyan-50 rounded-r-lg mt-4">
+                        <h4 class="font-bold text-lg text-cyan-800 flex items-center justify-between">
+                            Azure: ${item.azureService} 
+                            ${item.azureLink ? `<a href="${item.azureLink}" target="_blank" class="text-sm font-normal text-cyan-500 link-input ml-2">(Link)</a>` : ''}
+                            <button class="ml-auto px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full hover:bg-indigo-600 transition duration-150 validate-btn" 
+                                data-aws-service="${item.awsService}"
+                                data-cloud-service="${item.azureService}"
+                                data-cloud-name="Azure" 
+                                data-aws-desc="${cleanAwsDesc}" 
+                                data-cloud-desc="${cleanAzureDesc}" 
+                                data-equiv-notes="${cleanEquivAzure}"
+                                id="validateBtn_${resultIdBase}_Azure">Validar no Gemini</button>
+                        </h4>
+                        <p class="text-sm text-gray-700 mt-2">${item.azureDesc || 'Sem descrição.'}</p>
+                        <p class="mt-3 text-sm font-semibold text-gray-800">Equivalência com AWS:</p>
+                        <p class="text-sm text-gray-600">${item.equivAzure || 'Sem notas de equivalência.'}</p>
+                        <div id="geminiResult_${resultIdBase}_Azure" class="mt-3 p-2 text-xs rounded-lg min-h-[30px] bg-white border border-gray-200">
+                            <span class="text-gray-400">Clique em "Validar no Gemini" para iniciar a análise.</span>
+                        </div>
+                    </div>
+                ` : '';
+                
+                // Conteúdo para OCI
+                const ociContent = item.ociService ? `
+                    <div class="cloud-service p-4 border-l-4 oci-border bg-red-50 rounded-r-lg mt-4">
+                        <h4 class="font-bold text-lg text-red-800 flex items-center justify-between">
+                            OCI: ${item.ociService} 
+                            ${item.ociLink ? `<a href="${item.ociLink}" target="_blank" class="text-sm font-normal text-red-500 link-input ml-2">(Link)</a>` : ''}
+                            <button class="ml-auto px-3 py-1 bg-indigo-500 text-white text-xs font-semibold rounded-full hover:bg-indigo-600 transition duration-150 validate-btn" 
+                                data-aws-service="${item.awsService}"
+                                data-cloud-service="${item.ociService}"
+                                data-cloud-name="OCI" 
+                                data-aws-desc="${cleanAwsDesc}" 
+                                data-cloud-desc="${cleanOciDesc}" 
+                                data-equiv-notes="${cleanEquivOci}"
+                                id="validateBtn_${resultIdBase}_OCI">Validar no Gemini</button>
+                        </h4>
+                        <p class="text-sm text-gray-700 mt-2">${item.ociDesc || 'Sem descrição.'}</p>
+                        <p class="mt-3 text-sm font-semibold text-gray-800">Equivalência com AWS:</p>
+                        <p class="text-sm text-gray-600">${item.equivOci || 'Sem notas de equivalência.'}</p>
+                        <div id="geminiResult_${resultIdBase}_OCI" class="mt-3 p-2 text-xs rounded-lg min-h-[30px] bg-white border border-gray-200">
+                            <span class="text-gray-400">Clique em "Validar no Gemini" para iniciar a análise.</span>
+                        </div>
+                    </div>
+                ` : '';
+
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header bg-indigo-50 hover:bg-indigo-100">
+                        <span class="font-semibold text-xl text-gray-800">${item.awsService}</span>
+                        <div class="flex items-center text-sm text-gray-600">
+                            Categoria: <span class="font-bold ml-1 text-indigo-700">${item.category}</span>
+                            <svg class="expand-icon w-5 h-5 ml-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <!-- Descrição AWS -->
+                        <div class="p-4 border-b">
+                            <h3 class="font-bold text-lg text-gray-800 flex items-center">
+                                AWS: ${item.awsService} 
+                                ${item.awsLink ? `<a href="${item.awsLink}" target="_blank" class="text-sm font-normal text-blue-500 link-input ml-2">(Link)</a>` : ''}
+                            </h3>
+                            <p class="text-sm text-gray-700 mt-2">${item.awsDesc || 'Sem descrição.'}</p>
+                        </div>
+
+                        <!-- Serviços Equivalentes (GCP, Azure, OCI) -->
+                        <div class="p-4">
+                            <h3 class="font-bold text-xl text-gray-700 mb-4 border-b pb-2">Serviços Equivalentes</h3>
+                            ${gcpContent}
+                            ${azureContent}
+                            ${ociContent}
+                        </div>
+                    </div>
+                `;
+                servicesContainer.appendChild(card);
+            });
+
+            // 1. ANEXA LISTENERS DE EXPANSÃO (Toggle)
+            document.querySelectorAll('.card-header').forEach(header => {
+                header.addEventListener('click', (event) => {
+                    const content = event.currentTarget.nextElementSibling;
+                    const icon = event.currentTarget.querySelector('.expand-icon');
+                    
+                    if (content.classList.contains('show')) {
+                        content.classList.remove('show');
+                        icon.classList.remove('rotate');
+                    } else {
+                        // Fecha outros cartões
+                        document.querySelectorAll('.card-content.show').forEach(openContent => {
+                            openContent.classList.remove('show');
+                            openContent.previousElementSibling.querySelector('.expand-icon').classList.remove('rotate');
+                        });
+
+                        content.classList.add('show');
+                        icon.classList.add('rotate');
+                    }
+                });
+            });
+
+            // 2. ANEXA LISTENERS DO BOTÃO "Validar no Gemini"
+            document.querySelectorAll('.validate-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const btn = event.currentTarget;
+                    const cloudName = btn.getAttribute('data-cloud-name');
+                    
+                    // LÊ OS ATRIBUTOS DE SERVIÇO
+                    const awsService    = btn.getAttribute('data-aws-service');
+                    const cloudService  = btn.getAttribute('data-cloud-service');
+
+                    // Lê os dados dos atributos (já limpos)
+                    const awsDesc   = btn.getAttribute('data-aws-desc').replace(/&quot;/g, '"');
+                    const cloudDesc = btn.getAttribute('data-cloud-desc').replace(/&quot;/g, '"');
+                    const equivNotes= btn.getAttribute('data-equiv-notes').replace(/&quot;/g, '"');
+
+                    // ID base e elemento de resultado
+                    const resultIdBase  = awsService.replace(/\s/g, '_');
+                    const resultEl      = document.getElementById(`geminiResult_${resultIdBase}_${cloudName}`);
+
+                    // Se o botão estiver em modo 'Fechar', então fecha/reset a exibição
+                    if (btn.textContent && btn.textContent.trim().toLowerCase().startsWith('fechar')) {
+                        if (resultEl) {
+                            resultEl.innerHTML = `<span class="text-gray-400">Clique em \"Validar no Gemini\" para iniciar a análise.</span>`;
+                        }
+                        // restaura texto e estilo original do botão (sólido indigo)
+                        btn.textContent = 'Validar no Gemini';
+                        btn.classList.remove('bg-orange-400','hover:bg-orange-500','text-black');
+                        btn.classList.add('bg-indigo-500','hover:bg-indigo-600','text-white','transition-colors','duration-200');
+                        return;
+                    }
+
+                    // Caso contrário, tenta iniciar a validação
+                    if (awsDesc && cloudDesc) {
+                         validateService(cloudName, awsService, cloudService, awsDesc, cloudDesc, equivNotes);
+                    } else {
+                        if (resultEl) {
+                            resultEl.innerHTML = `<div class="p-3 bg-yellow-100 border border-yellow-300 rounded-lg text-yellow-700 text-sm">⚠️ Descrição do serviço AWS ou ${cloudName} ausente. Análise impossível.</div>`;
+                        }
+                    }
+                });
+            });
+        }
+
+
+        function loadData(filename) {
+            
+            loadingIndicator.classList.remove('hidden');
+            allServices = [];
+            servicesContainer.innerHTML = '';
+
+            // Agora carrega qualquer arquivo CSV especificado
+            console.log("Carregando dados do arquivo:", filename);
+            fetch(filename)
+                .then(response => {
+                    if (!response.ok) 
+                        throw new Error(`Falha ao carregar o arquivo ${filename}`);
+                    return response.text();
+                })
+                .then(csvText => {
+                    allServices = parseCSV(csvText);
+                    filterServices();
+                })
+                .catch(error => {
+                    console.error("Erro ao carregar dados:", error);
+                    servicesContainer.innerHTML = `<p class="text-red-600 text-center p-4">Erro ao carregar dados: ${error.message}</p>`;
+                })
+                .finally(() => {
+                    loadingIndicator.classList.add('hidden');
+                });
+        }
+        
+        function filterServices() {
+            const query = searchInput.value.toLowerCase();
+            const filteredServices = allServices.filter(service => {	
+                const searchString = `${service.awsService} ${service.category} ${service.gcpService} ${service.azureService} ${service.ociService} ${service.awsDesc} ${service.gcpDesc} ${service.azureDesc} ${service.ociDesc} ${service.equivGcp} ${service.equivAzure} ${service.equivOci}`.toLowerCase();
+                return searchString.includes(query);
+            });
+            renderServices(filteredServices);
+        }
+
+        // --- Eventos e Inicialização Principal ---
+        window.onload = () => {
+            // Torna validateService global para evitar erros de escopo
+            window.validateService = validateService; 
+            
+            searchInput.addEventListener('input', filterServices);
+            fileSelect.addEventListener ('change', (event) => { loadData(event.target.value); });
+            
+            // Inicia o carregamento com o arquivo completo de serviços
+            loadData('./csv/cloudcomp.csv');
+        };
+
+        // Ajusta o padding-top do container principal para compensar a altura do header fixo
+        function adjustHeaderOffset() {
+            const header = document.getElementById('header');
+            const container = document.querySelector('.container');
+            if (header && container) {
+                // usa offsetHeight para pegar altura real (incluindo margens internas)
+                const h = header.offsetHeight;
+                container.style.paddingTop = h + 'px';
+            }
+        }
+
+        // Ajusta ao carregar e ao redimensionar a janela
+        window.addEventListener('load'  , adjustHeaderOffset);
+        window.addEventListener('resize', adjustHeaderOffset);
+    </script>
+
+</body>
+</html>
